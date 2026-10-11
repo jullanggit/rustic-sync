@@ -1,4 +1,4 @@
-Sync a rustic repository across multiple machines.
+Sync a [rustic](https://github.com/rustic-rs/rustic) repository across multiple machines.
 
 ## Local-first Backups
 
