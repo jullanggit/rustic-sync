@@ -18,10 +18,8 @@ struct Config {
 
 #[derive(Deserialize)]
 struct MachineConfig {
-    /// rustic's `--use-profile` option to use for syncing
-    rustic_sync_profile: String,
-    /// rustic's `--use-profile` option to use for `rustic forget`
-    rustic_forget_profile: String,
+    /// rustic's `--use-profile` option
+    rustic_profile: String,
     /// rustic's `--filter-jq` option
     filter_jq: Option<String>,
 }
@@ -71,7 +69,7 @@ fn main() {
                     "copy",
                     "--init",
                     "--use-profile",
-                    &host_config.rustic_sync_profile,
+                    &host_config.rustic_profile,
                     "--target",
                     &config.rustic_profile,
                     // only copy this host's snapshot to other devicces
@@ -126,17 +124,17 @@ fn main() {
                 }
 
                 if let Some(others_owned_snapshots) =
-                    get_owned_snapshots(other_machine, &other_config.rustic_sync_profile)
+                    get_owned_snapshots(other_machine, &other_config.rustic_profile)
                 {
                     let local_others_owned_snapshots =
-                        get_owned_snapshots(other_machine, &host_config.rustic_sync_profile)
+                        get_owned_snapshots(other_machine, &host_config.rustic_profile)
                             .expect("Should be able to get local snapshots");
 
                     let only_local =
                         local_others_owned_snapshots.difference(&others_owned_snapshots);
                     let mut command = Command::new("rustic");
                     command
-                        .args(["--use-profile", &host_config.rustic_sync_profile, "forget"])
+                        .args(["--use-profile", &host_config.rustic_profile, "forget"])
                         .args(only_local.collect::<Vec<&String>>());
 
                     run_rustic_cmd(command, "forget non-owned", "forgot non-owned", "");
@@ -145,11 +143,7 @@ fn main() {
         }
         Commands::Forget => {
             let mut command = Command::new("rustic");
-            command.args([
-                "--use-profile",
-                &host_config.rustic_forget_profile,
-                "forget",
-            ]);
+            command.args(["--use-profile", &host_config.rustic_profile, "forget"]);
 
             run_rustic_cmd(command, "forget owned", "forgot owned", "");
         }
