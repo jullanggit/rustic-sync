@@ -10,8 +10,6 @@ use serde::Deserialize;
 
 #[derive(Deserialize)]
 struct Config {
-    /// The profile passed to rustic's `--use-profile` option
-    rustic_profile: String,
     /// Machine hostname -> machine config
     machines: HashMap<String, MachineConfig>,
 }
