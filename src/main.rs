@@ -109,12 +109,12 @@ fn main() {
                     ]);
                     run_rustic_cmd(command, "list", "listed", &format!(" from {owner}")).map(
                         |stdout| {
-                            let snapshots: Snapshots = serde_json::from_slice(&stdout)
+                            let snapshots: Vec<Snapshots> = serde_json::from_slice(&stdout)
                                 .expect("Failed to deserialize snapshots");
 
                             snapshots
-                                .snapshots
                                 .into_iter()
+                                .flat_map(|snapshots| snapshots.snapshots)
                                 .map(|snapshot| snapshot.id)
                                 .collect()
                         },
