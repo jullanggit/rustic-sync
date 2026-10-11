@@ -2,7 +2,7 @@ Sync a [rustic](https://github.com/rustic-rs/rustic) repository across multiple 
 
 ## Local-first Backups
 
-Each machine backs up to their local repository, which is then synced with other devices when they are reachable.
+Each machine backs up to their local repository, which is then synced with other machines when they are reachable.
 
 ## Syncing
 
@@ -15,8 +15,8 @@ Snapshots are transferred between machines using `rustic copy`.
 Every machine "owns" it's own snapshots, and is the authoritative source for them. This means concretely:
 
 1. `rustic-sync forget` only runs on snapshots the machine owns
-2. Only owned snapshots are synced to other devices.
-3. Devices `forget` snapshots that the owner no longer has
+2. Only owned snapshots are synced to other machines.
+3. Machines `forget` snapshots that the owner no longer has
 
 This together ensures consistency across the cluster.
 
