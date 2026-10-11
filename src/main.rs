@@ -6,6 +6,7 @@ use std::{
 };
 
 use clap::Parser;
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -55,89 +56,89 @@ fn main() {
 
     match cli.command {
         Commands::Sync => {
-            for (other_machine, other_config) in config
+            config
                 .machines
-                .iter()
+                .par_iter()
                 .filter(|(machine, _)| machine != &&host)
-            {
-                // --- send owned snapshots ---
-
-                let mut command = Command::new("rustic");
-                command.args([
-                    "copy",
-                    "--init",
-                    "--use-profile",
-                    &host_config.rustic_profile,
-                    "--target",
-                    &other_config.rustic_profile,
-                    // only copy this host's snapshot to other devicces
-                    "--filter-host",
-                    &host,
-                ]);
-                if let Some(ref jq) = other_config.filter_jq {
-                    command.args(["--filter-jq", jq]);
-                }
-
-                run_rustic_cmd(command, "sync", "synced", &format!(" to {other_machine}"));
-
-                // --- delete non-owned snapshots ---
-
-                fn get_owned_snapshots(
-                    owner: &str,
-                    rustic_profile: &str,
-                ) -> Option<HashSet<String>> {
-                    /// Structure returned by `rustic snapshots --json`
-                    #[derive(Deserialize)]
-                    struct Snapshots {
-                        // only field we care about
-                        snapshots: Vec<Snapshot>,
-                    }
-                    #[derive(Deserialize)]
-                    struct Snapshot {
-                        // only field we care about
-                        id: String,
-                    }
+                .for_each(|(other_machine, other_config)| {
+                    // --- send owned snapshots ---
 
                     let mut command = Command::new("rustic");
                     command.args([
+                        "copy",
+                        "--init",
                         "--use-profile",
-                        rustic_profile,
-                        "snapshots",
+                        &host_config.rustic_profile,
+                        "--target",
+                        &other_config.rustic_profile,
+                        // only copy this host's snapshot to other devicces
                         "--filter-host",
-                        owner,
-                        "--json",
+                        &host,
                     ]);
-                    run_rustic_cmd(command, "list", "listed", &format!(" from {owner}")).map(
-                        |stdout| {
-                            let snapshots: Vec<Snapshots> = serde_json::from_slice(&stdout)
-                                .expect("Failed to deserialize snapshots");
+                    if let Some(ref jq) = other_config.filter_jq {
+                        command.args(["--filter-jq", jq]);
+                    }
 
-                            snapshots
-                                .into_iter()
-                                .flat_map(|snapshots| snapshots.snapshots)
-                                .map(|snapshot| snapshot.id)
-                                .collect()
-                        },
-                    )
-                }
+                    run_rustic_cmd(command, "sync", "synced", &format!(" to {other_machine}"));
 
-                if let Some(others_owned_snapshots) =
-                    get_owned_snapshots(other_machine, &other_config.rustic_profile)
-                {
-                    let local_others_owned_snapshots =
-                        get_owned_snapshots(other_machine, &host_config.rustic_profile)
-                            .expect("Should be able to get local snapshots");
+                    // --- delete non-owned snapshots ---
 
-                    let only_local =
-                        local_others_owned_snapshots.difference(&others_owned_snapshots);
-                    let mut command = Command::new("rustic");
-                    command
-                        .args(["--use-profile", &host_config.rustic_profile, "forget"])
-                        .args(only_local.collect::<Vec<&String>>());
+                    fn get_owned_snapshots(
+                        owner: &str,
+                        rustic_profile: &str,
+                    ) -> Option<HashSet<String>> {
+                        /// Structure returned by `rustic snapshots --json`
+                        #[derive(Deserialize)]
+                        struct Snapshots {
+                            // only field we care about
+                            snapshots: Vec<Snapshot>,
+                        }
+                        #[derive(Deserialize)]
+                        struct Snapshot {
+                            // only field we care about
+                            id: String,
+                        }
 
-                    run_rustic_cmd(command, "forget non-owned", "forgot non-owned", "");
-                }
-            }
+                        let mut command = Command::new("rustic");
+                        command.args([
+                            "--use-profile",
+                            rustic_profile,
+                            "snapshots",
+                            "--filter-host",
+                            owner,
+                            "--json",
+                        ]);
+                        run_rustic_cmd(command, "list", "listed", &format!(" from {owner}")).map(
+                            |stdout| {
+                                let snapshots: Vec<Snapshots> = serde_json::from_slice(&stdout)
+                                    .expect("Failed to deserialize snapshots");
+
+                                snapshots
+                                    .into_iter()
+                                    .flat_map(|snapshots| snapshots.snapshots)
+                                    .map(|snapshot| snapshot.id)
+                                    .collect()
+                            },
+                        )
+                    }
+
+                    if let Some(others_owned_snapshots) =
+                        get_owned_snapshots(other_machine, &other_config.rustic_profile)
+                    {
+                        let local_others_owned_snapshots =
+                            get_owned_snapshots(other_machine, &host_config.rustic_profile)
+                                .expect("Should be able to get local snapshots");
+
+                        let only_local =
+                            local_others_owned_snapshots.difference(&others_owned_snapshots);
+                        let mut command = Command::new("rustic");
+                        command
+                            .args(["--use-profile", &host_config.rustic_profile, "forget"])
+                            .args(only_local.collect::<Vec<&String>>());
+
+                        run_rustic_cmd(command, "forget non-owned", "forgot non-owned", "");
+                    }
+                })
         }
         Commands::Forget => {
             let mut command = Command::new("rustic");
