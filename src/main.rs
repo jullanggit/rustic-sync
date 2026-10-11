@@ -69,7 +69,7 @@ fn main() {
                     "--use-profile",
                     &host_config.rustic_profile,
                     "--target",
-                    &config.rustic_profile,
+                    &other_config.rustic_profile,
                     // only copy this host's snapshot to other devicces
                     "--filter-host",
                     &host,
