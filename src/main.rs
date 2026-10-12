@@ -142,7 +142,13 @@ fn main() {
         }
         Commands::Forget => {
             let mut command = Command::new("rustic");
-            command.args(["--use-profile", &host_config.rustic_profile, "forget"]);
+            command.args([
+                "--use-profile",
+                &host_config.rustic_profile,
+                "forget",
+                "--filter-host",
+                &host,
+            ]);
 
             run_rustic_cmd(command, "forget owned", "forgot owned", "");
         }
