@@ -155,6 +155,8 @@ fn main() {
                                 .args(only_local);
 
                             run_rustic_cmd(command, "forget non-owned", "forgot non-owned", "");
+                        } else {
+                            println!("Non-owned snapshots for {other_machine} already up-to-date!");
                         }
                     }
                 })
