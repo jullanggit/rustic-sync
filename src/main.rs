@@ -128,15 +128,18 @@ fn main() {
                         let local_others_owned_snapshots =
                             get_owned_snapshots(other_machine, &host_config.rustic_profile)
                                 .expect("Should be able to get local snapshots");
+                        let only_local = local_others_owned_snapshots
+                            .difference(&others_owned_snapshots)
+                            .collect::<Vec<&String>>();
 
-                        let only_local =
-                            local_others_owned_snapshots.difference(&others_owned_snapshots);
-                        let mut command = Command::new("rustic");
-                        command
-                            .args(["--use-profile", &host_config.rustic_profile, "forget"])
-                            .args(only_local.collect::<Vec<&String>>());
+                        if !only_local.is_empty() {
+                            let mut command = Command::new("rustic");
+                            command
+                                .args(["--use-profile", &host_config.rustic_profile, "forget"])
+                                .args(only_local);
 
-                        run_rustic_cmd(command, "forget non-owned", "forgot non-owned", "");
+                            run_rustic_cmd(command, "forget non-owned", "forgot non-owned", "");
+                        }
                     }
                 })
         }
