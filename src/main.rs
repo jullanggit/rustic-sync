@@ -156,6 +156,8 @@ fn run_rustic_cmd(
     past_participle: &str,
     suffix: &str,
 ) -> Option<Vec<u8>> {
+    println!("Running {command:?}");
+
     let output = command.output().expect("Failed to spawn rustic process");
 
     match output.status.success() {
