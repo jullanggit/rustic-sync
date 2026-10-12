@@ -1,6 +1,7 @@
 use std::{
     collections::{HashMap, HashSet},
     fs,
+    hash::{Hash, Hasher},
     path::PathBuf,
     process::Command,
 };
@@ -83,20 +84,34 @@ fn main() {
 
                     // --- delete non-owned snapshots ---
 
+                    #[derive(Deserialize)]
+                    struct Snapshot {
+                        /// Local snapshot identifier. Not stable across `rustic copy`.
+                        id: String,
+                        /// Used for comparisons. Stable across `rustic copy`.
+                        time: String,
+                    }
+                    impl PartialEq for Snapshot {
+                        fn eq(&self, other: &Self) -> bool {
+                            self.time == other.time
+                        }
+                    }
+                    impl Eq for Snapshot {}
+                    impl Hash for Snapshot {
+                        fn hash<H: Hasher>(&self, state: &mut H) {
+                            self.time.hash(state);
+                        }
+                    }
+
                     fn get_owned_snapshots(
                         owner: &str,
                         rustic_profile: &str,
-                    ) -> Option<HashSet<String>> {
+                    ) -> Option<HashSet<Snapshot>> {
                         /// Structure returned by `rustic snapshots --json`
                         #[derive(Deserialize)]
                         struct Snapshots {
                             // only field we care about
                             snapshots: Vec<Snapshot>,
-                        }
-                        #[derive(Deserialize)]
-                        struct Snapshot {
-                            // only field we care about
-                            id: String,
                         }
 
                         let mut command = Command::new("rustic");
@@ -116,7 +131,6 @@ fn main() {
                                 snapshots
                                     .into_iter()
                                     .flat_map(|snapshots| snapshots.snapshots)
-                                    .map(|snapshot| snapshot.id)
                                     .collect()
                             },
                         )
@@ -128,9 +142,11 @@ fn main() {
                         let local_others_owned_snapshots =
                             get_owned_snapshots(other_machine, &host_config.rustic_profile)
                                 .expect("Should be able to get local snapshots");
+
                         let only_local = local_others_owned_snapshots
-                            .difference(&others_owned_snapshots)
-                            .collect::<Vec<&String>>();
+                            .difference(&others_owned_snapshots) // compares by time
+                            .map(|snapshot| snapshot.id.clone())
+                            .collect::<Vec<String>>();
 
                         if !only_local.is_empty() {
                             let mut command = Command::new("rustic");
