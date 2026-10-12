@@ -149,6 +149,12 @@ fn main() {
                             .collect::<Vec<String>>();
 
                         if !only_local.is_empty() {
+                            // safety guard - assert that we aren't deleting all local snapshots
+                            assert!(
+                                !local_others_owned_snapshots.is_disjoint(&others_owned_snapshots),
+                                "about to forget all local snapshots for {other_machine}",
+                            );
+
                             let mut command = Command::new("rustic");
                             command
                                 .args(["--use-profile", &host_config.rustic_profile, "forget"])
